@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>轻搜·V5</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 基础变量（浅色默认） */
+        :root {
+            --bg-page: #fff7ed;
+            --bg-card: #ffffff;
+            --bg-soft: #fef3e2;
+            --text-primary: #2d2a24;
+            --text-secondary: #7c6e5a;
+            --text-muted: #9c8a72;
+            --title-link: #b45309;
+            --url-color: #d97706;
+            --snippet-color: #6b5b4a;
+            --button-bg: #e7dfd3;
+            --button-text: #2d2a24;
+            --accent: #d97706;
+            --accent-dark: #b45309;
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
+            --tag-bg: #e7dfd3;
+            --tag-text: #2d2a24;
+        }
+
+        /* 深色模式只改变背景和文字，强调色由自定义变量覆盖 */
+        body.dark {
+            --bg-page: #1e2a3a;
+            --bg-card: #2a3a4a;
+            --bg-soft: #233240;
+            --text-primary: #e8eef2;
+            --text-secondary: #bdc4cc;
+            --text-muted: #8e9aab;
+            --button-bg: #3a4a5a;
+            --button-text: #e8eef2;
+            --tag-bg: #3a4a5a;
+            --tag-text: #e8eef2;
+            --snippet-color: #cfdde6;
+            /* 不再定义 --accent 等，让自定义色生效 */
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-page);
+            padding: 16px;
+            color: var(--text-primary);
+            transition: background 0.2s, color 0.2s;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* 头部 */
+        .header {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+        .settings-icon {
+            background: transparent;
+            font-size: 1.2rem;
+            padding: 4px 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* 设置面板 */
+        .settings-panel {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .settings-panel.show {
+            display: block;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .setting-item label {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        select, input[type="text"] {
+            background: var(--bg-page);
+            border: 1px solid var(--text-muted);
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        /* 自定义复选框（圆形滑块） */
+        .custom-checkbox {
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+            background: var(--text-muted);
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .custom-checkbox::after {
+            content: "";
+            display: block;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: 0.2s;
+        }
+        .custom-checkbox.active {
+            background: var(--accent);
+        }
+        .custom-checkbox.active::after {
+            left: 18px;
+        }
+        .theme-toggle {
+            display: flex;
+            gap: 8px;
+        }
+        .theme-toggle button {
+            background: var(--button-bg);
+            color: var(--button-text);
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .theme-toggle button.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* 可折叠提示区 */
+        .collapse-wrapper {
+            margin-bottom: 12px;
+        }
+        .toggle-tip {
+            background: transparent;
+            border: none;
+            font-size: 0.7rem;
+            color: var(--accent);
+            padding: 4px 0;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .toggle-tip::before {
+            content: "▶";
+            font-size: 0.6rem;
+            transition: transform 0.2s;
+        }
+        .toggle-tip.open::before {
+            transform: rotate(90deg);
+        }
+        .tip-content {
+            background: var(--bg-soft);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            display: none;
+            line-height: 1.4;
+        }
+        .tip-content.show {
+            display: block;
+        }
+
+        /* 搜索栏 */
+        .search-area {
+            background: var(--bg-card);
+            border-radius: 40px;
+            padding: 4px 4px 4px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 0;
+            font-size: 0.95rem;
+            border: none;
+            background: transparent;
+            outline: none;
+            color: var(--text-primary);
+        }
+        button {
+            background: var(--accent);
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        button:active {
+            background: var(--accent-dark);
+        }
+
+        /* 关键词区域（整合状态 + 清空按钮） */
+        .keyword-area {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .keyword-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .keyword-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .status-info {
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: var(--bg-soft);
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        .keyword-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            word-break: break-all;
+            margin-bottom: 8px;
+        }
+        .keyword-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .keyword-actions button {
+            background: var(--danger);
+            font-size: 0.7rem;
+            padding: 4px 12px;
+        }
+
+        /* 搜索结果卡片 */
+        .result-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .result-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 12px 14px;
+        }
+        .result-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }
+        .result-title a {
+            color: var(--title-link);
+            text-decoration: none;
+        }
+        .result-title a:active {
+            opacity: 0.7;
+        }
+        .result-url {
+            font-size: 0.65rem;
+            color: var(--url-color);
+            word-break: break-all;
+            margin-bottom: 6px;
+            font-family: monospace;
+        }
+        .result-snippet {
+            font-size: 0.75rem;
+            color: var(--snippet-color);
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+        .result-tag {
+            font-size: 0.6rem;
+            color: var(--tag-text);
+            background: var(--tag-bg);
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 4px;
+        }
+        .hidden {
+            display: none;
+        }
+
+        /* 分页区域 */
+        .pagination-area {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .page-info {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            cursor: pointer;
+            display: inline-block;
+            background: var(--bg-soft);
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+        .page-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .page-buttons button {
+            background: var(--button-bg);
+            color: var(--button-text);
+            padding: 6px 18px;
+            font-size: 0.8rem;
+            min-width: 80px;
+        }
+        .page-buttons button:active {
+            background: var(--text-muted);
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .nav-buttons button {
+            background: var(--button-bg);
+            color: var(--button-text);
+            padding: 6px 14px;
+            font-size: 0.75rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            color: var(--text-secondary);
+        }
+        * {
+            box-shadow: none !important;
+            border: none !important;
+        }
+        input:focus {
+            outline: none;
+        }
+        button {
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>轻搜</h1>
+        <button class="settings-icon" id="settingsToggleBtn">╋</button>
+    </div>
+
+    <!-- 设置面板 -->
+    <div id="settingsPanel" class="settings-panel">
+        <div class="setting-item">
+            <label>每页显示数量</label>
+            <select id="pageSizeSelect">
+                <option value="10">10 条</option>
+                <option value="20" selected>20 条</option>
+                <option value="30">30 条</option>
+                <option value="50">50 条</option>
+            </select>
+        </div>
+        <div class="setting-item">
+            <label>深浅模式</label>
+            <div class="theme-toggle" id="themeToggle">
+                <button data-theme="light">☀️ 浅色</button>
+                <button data-theme="dark">🌙 深色</button>
+            </div>
+        </div>
+        <div class="setting-item">
+            <label>主题色 (HEX)</label>
+            <input type="text" id="themeColorInput" placeholder="#FF79C3" value="#FF79C3" maxlength="7">
+        </div>
+        <div class="setting-item">
+            <label>隐藏标题</label>
+            <div class="checkbox-group">
+                <span class="custom-checkbox" id="hideTitleCheckbox"></span>
+            </div>
+        </div>
+        <div class="setting-item">
+            <label>隐藏链接</label>
+            <div class="checkbox-group">
+                <span class="custom-checkbox" id="hideUrlCheckbox"></span>
+            </div>
+        </div>
+        <div class="setting-item">
+            <label>隐藏正文</label>
+            <div class="checkbox-group">
+                <span class="custom-checkbox" id="hideSnippetCheckbox"></span>
+            </div>
+        </div>
+        <div class="setting-item">
+            <label>隐藏分类标签</label>
+            <div class="checkbox-group">
+                <span class="custom-checkbox" id="hideTagCheckbox"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 可折叠使用说明 -->
+    <div class="collapse-wrapper">
+        <button class="toggle-tip" id="toggleTipBtn"> 使用说明</button>
+        <div class="tip-content" id="tipContent">
+            📌 <strong>使用方法</strong><br>
+            1. 安装用户脚本（必应数据提取器）。<br>
+            2. 输入关键词，点击“自动搜索”。<br>
+            3. 必应窗口瞬间隐藏(如果不隐藏可手动切换标签页)，后台自动翻页抓取全部结果。<br>
+            4. 结果实时显示在此，支持分页浏览。<br>
+            💡 允许弹出窗口即可，全程无干扰。
+        </div>
+    </div>
+
+    <!-- 搜索栏 -->
+    <div class="search-area">
+        <input type="text" id="searchInput" placeholder="输入搜索词" value="DeepSeek最新资讯">
+        <button id="searchBtn">自动搜索</button>
+    </div>
+
+    <!-- 关键词区域（整合状态 + 清空按钮） -->
+    <div id="keywordContainer" class="keyword-area" style="display: none;">
+        <div class="keyword-header">
+            <div class="keyword-label">当前搜索词</div>
+            <div class="status-info" id="statusInfo">-</div>
+        </div>
+        <div class="keyword-value" id="keywordValue">-</div>
+        <div class="keyword-actions">
+            <button id="clearBtn" class="clear-btn">清空结果</button>
+        </div>
+    </div>
+
+    <!-- 结果列表 -->
+    <div id="resultsContainer">
+        <div class="empty-state">
+            🌟 暂无搜索结果<br>
+            输入关键词，点击“自动搜索”开始抓取。
+        </div>
+    </div>
+
+    <!-- 分页区域（动态生成） -->
+    <div id="paginationArea" class="pagination-area" style="display: none;"></div>
+</div>
+
+<script>
+    // ---------- 数据与状态 ----------
+    let allResults = [];
+    let currentKeyword = '';
+    let currentPage = 1;
+    let itemsPerPage = 20;
+    let currentTheme = 'light';
+    // 隐藏选项
+    let hideTitle = false;
+    let hideUrl = false;
+    let hideSnippet = false;
+    let hideTag = false;
+    // 自定义主题色
+    let customAccent = '#FF79C3';
+
+    // DOM 元素
+    const resultsContainer = document.getElementById('resultsContainer');
+    const keywordContainer = document.getElementById('keywordContainer');
+    const keywordValueSpan = document.getElementById('keywordValue');
+    const statusInfoSpan = document.getElementById('statusInfo');
+    const paginationArea = document.getElementById('paginationArea');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const toggleTipBtn = document.getElementById('toggleTipBtn');
+    const tipContent = document.getElementById('tipContent');
+    const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const pageSizeSelect = document.getElementById('pageSizeSelect');
+    const themeToggleBtns = document.querySelectorAll('#themeToggle button');
+    const themeColorInput = document.getElementById('themeColorInput');
+    // 自定义复选框元素
+    const hideTitleCheckbox = document.getElementById('hideTitleCheckbox');
+    const hideUrlCheckbox = document.getElementById('hideUrlCheckbox');
+    const hideSnippetCheckbox = document.getElementById('hideSnippetCheckbox');
+    const hideTagCheckbox = document.getElementById('hideTagCheckbox');
+
+    // ---------- 辅助函数 ----------
+    function applyAccentColor(color) {
+        // 设置 CSS 变量覆盖强调色（同时作用于浅色和深色模式）
+        document.documentElement.style.setProperty('--accent', color);
+        // 计算深色版本（简单变暗）
+        let darkColor = color;
+        if (color.startsWith('#')) {
+            let r = parseInt(color.slice(1,3), 16);
+            let g = parseInt(color.slice(3,5), 16);
+            let b = parseInt(color.slice(5,7), 16);
+            r = Math.max(0, r - 40);
+            g = Math.max(0, g - 40);
+            b = Math.max(0, b - 40);
+            darkColor = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+        }
+        document.documentElement.style.setProperty('--accent-dark', darkColor);
+        document.documentElement.style.setProperty('--title-link', color);
+        document.documentElement.style.setProperty('--url-color', color);
+    }
+
+    function initCustomCheckbox(checkboxElem, state, onChange) {
+        if (state) checkboxElem.classList.add('active');
+        checkboxElem.addEventListener('click', () => {
+            const newState = !checkboxElem.classList.contains('active');
+            if (newState) checkboxElem.classList.add('active');
+            else checkboxElem.classList.remove('active');
+            onChange(newState);
+        });
+    }
+
+    // ---------- 设置存储与加载 ----------
+    function loadSettings() {
+        const savedPageSize = localStorage.getItem('aggregator_pageSize');
+        if (savedPageSize) {
+            itemsPerPage = parseInt(savedPageSize, 10);
+            pageSizeSelect.value = itemsPerPage;
+        }
+        const savedTheme = localStorage.getItem('aggregator_theme');
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+            currentTheme = savedTheme;
+            applyTheme(currentTheme);
+        } else {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                currentTheme = 'dark';
+                applyTheme(currentTheme);
+                localStorage.setItem('aggregator_theme', 'dark');
+            } else {
+                currentTheme = 'light';
+                applyTheme(currentTheme);
+            }
+        }
+        // 加载隐藏选项
+        const savedHideTitle = localStorage.getItem('aggregator_hideTitle');
+        hideTitle = savedHideTitle === 'true';
+        const savedHideUrl = localStorage.getItem('aggregator_hideUrl');
+        hideUrl = savedHideUrl === 'true';
+        const savedHideSnippet = localStorage.getItem('aggregator_hideSnippet');
+        hideSnippet = savedHideSnippet === 'true';
+        const savedHideTag = localStorage.getItem('aggregator_hideTag');
+        hideTag = savedHideTag === 'true';
+        // 加载主题色
+        const savedColor = localStorage.getItem('aggregator_accent');
+        if (savedColor && savedColor.match(/^#[0-9A-Fa-f]{6}$/)) {
+            customAccent = savedColor;
+            themeColorInput.value = customAccent;
+            applyAccentColor(customAccent);
+        } else {
+            applyAccentColor('#FF79C3');
+        }
+        // 同步复选框UI
+        if (hideTitle) hideTitleCheckbox.classList.add('active');
+        if (hideUrl) hideUrlCheckbox.classList.add('active');
+        if (hideSnippet) hideSnippetCheckbox.classList.add('active');
+        if (hideTag) hideTagCheckbox.classList.add('active');
+    }
+
+    function savePageSize() { localStorage.setItem('aggregator_pageSize', itemsPerPage); }
+    function saveTheme(theme) { localStorage.setItem('aggregator_theme', theme); }
+    function saveHideOptions() {
+        localStorage.setItem('aggregator_hideTitle', hideTitle);
+        localStorage.setItem('aggregator_hideUrl', hideUrl);
+        localStorage.setItem('aggregator_hideSnippet', hideSnippet);
+        localStorage.setItem('aggregator_hideTag', hideTag);
+    }
+    function saveAccentColor(color) { localStorage.setItem('aggregator_accent', color); }
+
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            document.body.classList.add('dark');
+        } else {
+            document.body.classList.remove('dark');
+        }
+        // 更新按钮高亮
+        themeToggleBtns.forEach(btn => {
+            if (btn.dataset.theme === theme) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+        // 重新应用自定义颜色（确保覆盖深色模式下的默认颜色）
+        applyAccentColor(customAccent);
+    }
+
+    function setItemsPerPage(size) {
+        itemsPerPage = size;
+        savePageSize();
+        currentPage = 1;
+        if (allResults.length) {
+            renderCurrentPage();
+            renderPagination();
+        }
+    }
+    function setTheme(theme) {
+        currentTheme = theme;
+        applyTheme(theme);
+        saveTheme(theme);
+    }
+    function setHideTitle(value) { hideTitle = value; saveHideOptions(); if (allResults.length) renderCurrentPage(); }
+    function setHideUrl(value) { hideUrl = value; saveHideOptions(); if (allResults.length) renderCurrentPage(); }
+    function setHideSnippet(value) { hideSnippet = value; saveHideOptions(); if (allResults.length) renderCurrentPage(); }
+    function setHideTag(value) { hideTag = value; saveHideOptions(); if (allResults.length) renderCurrentPage(); }
+    function setAccentColor(color) {
+        if (!color.startsWith('#')) color = '#' + color;
+        if (color.match(/^#[0-9A-Fa-f]{6}$/)) {
+            customAccent = color;
+            applyAccentColor(customAccent);
+            saveAccentColor(customAccent);
+        }
+    }
+
+    // 监听设置变化
+    pageSizeSelect.addEventListener('change', (e) => setItemsPerPage(parseInt(e.target.value, 10)));
+    themeToggleBtns.forEach(btn => btn.addEventListener('click', () => setTheme(btn.dataset.theme)));
+    themeColorInput.addEventListener('change', (e) => {
+        let val = e.target.value.trim();
+        if (!val.startsWith('#')) val = '#' + val;
+        setAccentColor(val);
+    });
+    initCustomCheckbox(hideTitleCheckbox, hideTitle, setHideTitle);
+    initCustomCheckbox(hideUrlCheckbox, hideUrl, setHideUrl);
+    initCustomCheckbox(hideSnippetCheckbox, hideSnippet, setHideSnippet);
+    initCustomCheckbox(hideTagCheckbox, hideTag, setHideTag);
+    settingsToggleBtn.addEventListener('click', () => settingsPanel.classList.toggle('show'));
+    toggleTipBtn.addEventListener('click', () => {
+        tipContent.classList.toggle('show');
+        toggleTipBtn.classList.toggle('open');
+    });
+
+    // ---------- 渲染函数 ----------
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function renderCurrentPage() {
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const pageResults = allResults.slice(start, end);
+        if (pageResults.length === 0) {
+            resultsContainer.innerHTML = `<div class="empty-state">🌟 暂无搜索结果</div>`;
+            return;
+        }
+        const html = `
+            <div class="result-list">
+                ${pageResults.map(result => `
+                    <div class="result-card">
+                        <div class="result-title ${hideTitle ? 'hidden' : ''}">
+                            <a href="${escapeHtml(result.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(result.title)}</a>
+                        </div>
+                        <div class="result-url ${hideUrl ? 'hidden' : ''}">${escapeHtml(result.url)}</div>
+                        <div class="result-snippet ${hideSnippet ? 'hidden' : ''}">${escapeHtml(result.snippet || '无摘要')}</div>
+                        <div class="result-tag ${hideTag ? 'hidden' : ''}">来源：${result.engine === 'bing' ? '必应' : result.engine || '未知'}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        resultsContainer.innerHTML = html;
+    }
+
+    function jumpToPage() {
+        const totalPages = Math.ceil(allResults.length / itemsPerPage);
+        if (totalPages <= 1) return;
+        let inputPage = prompt(`请输入页码 (1-${totalPages})`, currentPage);
+        if (inputPage === null) return;
+        let page = parseInt(inputPage, 10);
+        if (isNaN(page)) return;
+        page = Math.min(totalPages, Math.max(1, page));
+        if (page !== currentPage) {
+            currentPage = page;
+            renderCurrentPage();
+            renderPagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(allResults.length / itemsPerPage);
+        if (totalPages <= 1) {
+            paginationArea.style.display = 'none';
+            return;
+        }
+        paginationArea.style.display = 'block';
+        let html = `
+            <div class="page-info" id="pageInfoBtn">
+                第 ${currentPage} / ${totalPages} 页
+            </div>
+            <div class="page-buttons">
+                <button data-page-prev>← 上一页</button>
+                <button data-page-next>下一页 →</button>
+            </div>
+            <div class="nav-buttons">
+                <button data-goto-first>↑ 回到顶部</button>
+                <button data-goto-last>↓ 去到底部</button>
+            </div>
+        `;
+        paginationArea.innerHTML = html;
+        document.getElementById('pageInfoBtn').addEventListener('click', jumpToPage);
+        const prevBtn = paginationArea.querySelector('[data-page-prev]');
+        const nextBtn = paginationArea.querySelector('[data-page-next]');
+        const gotoFirst = paginationArea.querySelector('[data-goto-first]');
+        const gotoLast = paginationArea.querySelector('[data-goto-last]');
+        prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderCurrentPage(); renderPagination(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+        nextBtn.addEventListener('click', () => { if (currentPage < totalPages) { currentPage++; renderCurrentPage(); renderPagination(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+        gotoFirst.addEventListener('click', () => { if (currentPage !== 1) { currentPage = 1; renderCurrentPage(); renderPagination(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+        gotoLast.addEventListener('click', () => { if (currentPage !== totalPages) { currentPage = totalPages; renderCurrentPage(); renderPagination(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+    }
+
+    function updateDisplay() {
+        if (allResults.length === 0) {
+            keywordContainer.style.display = 'none';
+            resultsContainer.innerHTML = `<div class="empty-state">🌟 暂无搜索结果<br>点击“自动搜索”开始抓取。</div>`;
+            paginationArea.style.display = 'none';
+            return;
+        }
+        keywordContainer.style.display = 'block';
+        keywordValueSpan.innerText = currentKeyword || '未知';
+        currentPage = 1;
+        renderCurrentPage();
+        renderPagination();
+    }
+
+    function updateStatus(statusText) {
+        statusInfoSpan.innerText = statusText;
+    }
+
+    // 接收消息
+    function handleMessage(event) {
+        const data = event.data;
+        if (data && data.type === 'BING_RESULTS') {
+            console.log('收到数据:', data);
+            updateStatus(`抓取中… ${data.totalExtracted} 条`);
+            currentKeyword = data.keyword || '';
+            allResults = data.results || [];
+            updateDisplay();
+            if (data.pageCount > 0 && data.totalExtracted === allResults.length) {
+                updateStatus(`完成！共 ${allResults.length} 条`);
+            }
+        }
+    }
+
+    function startSilentSearch() {
+        const keyword = searchInput.value.trim();
+        if (!keyword) { alert('请输入搜索关键词'); return; }
+        allResults = []; currentKeyword = ''; updateDisplay();
+        updateStatus('打开静默窗口…');
+        const bingUrl = `https://cn.bing.com/search?q=${encodeURIComponent(keyword)}&form=QBLH`;
+        const bingWindow = window.open(bingUrl, '_blank');
+        if (!bingWindow) {
+            alert('浏览器阻止了弹出窗口，请允许弹出窗口后重试。');
+            updateStatus('弹窗被阻止');
+        }
+    }
+
+    function clearDisplay() {
+        allResults = []; currentKeyword = ''; updateDisplay();
+        updateStatus('等待搜索');
+    }
+
+    window.addEventListener('message', handleMessage);
+    searchBtn.addEventListener('click', startSilentSearch);
+    clearBtn.addEventListener('click', clearDisplay);
+    searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') startSilentSearch(); });
+    loadSettings();
+</script>
+</body>
+</html>
