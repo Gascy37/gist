@@ -914,7 +914,7 @@
         function saveFullState() {
             const state = {
                 allResults, currentKeyword, currentPage, itemsPerPage, aiLimit,
-                hideTitle, hideUrl, hideSnippet, hideTag, customAccent,
+                hideTitle, hideUrl, hideSnippet, hideTag, customAccent, currentTheme,
                 hideApiKey, hideAiBlock,
                 aiApiKey: aiApiKeyInput.value.trim(),
                 aiPrompt: aiPromptInput.value,
@@ -937,6 +937,7 @@
                 hideSnippet = !!s.hideSnippet;
                 hideTag = !!s.hideTag;
                 customAccent = s.customAccent || '#FF79C3';
+                currentTheme = s.currentTheme || 'light';
                 hideApiKey = !!s.hideApiKey;
                 hideAiBlock = !!s.hideAiBlock;
                 if (s.aiApiKey) aiApiKeyInput.value = s.aiApiKey;
@@ -952,7 +953,9 @@
                 pageSizeSelect.value = itemsPerPage;
                 aiLimitSelect.value = aiLimit;
                 themeColorInput.value = customAccent;
+                applyTheme(currentTheme);          // 恢复深浅模式
                 applyAccentColor(customAccent);
+                // 恢复复选框UI状态
                 if(hideTitle) hideTitleCheckbox.classList.add('active'); else hideTitleCheckbox.classList.remove('active');
                 if(hideUrl) hideUrlCheckbox.classList.add('active'); else hideUrlCheckbox.classList.remove('active');
                 if(hideSnippet) hideSnippetCheckbox.classList.add('active'); else hideSnippetCheckbox.classList.remove('active');
@@ -1013,8 +1016,9 @@
             const apiKey = aiApiKeyInput.value.trim();
             if(!apiKey){ alert('请填写 DeepSeek API Key'); return; }
             if(allResults.length===0){ alert('请先搜索获取结果'); return; }
-            const userPrompt = aiPromptInput.value.trim() || '你总结前${limit}条搜索结果的主要信息🧐，用流畅的中文分点呈现哦🤔。';
             const limit = parseInt(aiLimitSelect.value);
+            // 修复默认提示词的动态 limit
+            const userPrompt = aiPromptInput.value.trim() || `你总结前${limit}条搜索结果的主要信息🧐，用流畅的中文分点呈现哦🤔。`;
             const topResults = allResults.slice(0, limit);
             if(topResults.length===0){ alert('没有结果可总结'); return; }
             const context = topResults.map((r,i)=>`${i+1}. 标题：${r.title}\n   链接：${r.url}\n   摘要：${r.snippet||'无'}`).join('\n\n');
